@@ -18,7 +18,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -38,73 +37,61 @@ jobs:
     - name: Capacitor sync
       run: npx cap sync android
 
-    # ── Copia plugin TCP nativo ──
     - name: Copia TelnetClusterPlugin
       run: |
         DEST="android/app/src/main/java/it/iw1fzr/dxcluster/plugins"
         mkdir -p "$DEST"
         cp android-plugin/TelnetClusterPlugin.java "$DEST/"
 
-    # ── Patch MainActivity: registra plugin ──
     - name: Patch MainActivity
       run: |
         MAIN="android/app/src/main/java/it/iw1fzr/dxcluster/MainActivity.java"
-        # Aggiunge import
         sed -i 's/import com\.getcapacitor\.BridgeActivity;/import com.getcapacitor.BridgeActivity;\nimport it.iw1fzr.dxcluster.plugins.TelnetClusterPlugin;/' "$MAIN"
-        # Registra plugin prima di super.onCreate
         sed -i 's/super\.onCreate(savedInstanceState);/registerPlugin(TelnetClusterPlugin.class);\n        super.onCreate(savedInstanceState);/' "$MAIN"
-        echo "=== MainActivity.java ==="
-        cat "$MAIN"
 
-    # ── Patch AndroidManifest: permesso INTERNET ──
     - name: Patch AndroidManifest
       run: |
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application/' "$MANIFEST"
-        echo "=== AndroidManifest.xml ==="
-        cat "$MANIFEST"
 
-    # ── Decodifica keystore ──
     - name: Decodifica keystore
       run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
 
-    # ── Build APK release ──
+    - name: Verifica keystore
+      run: |
+        keytool -list \
+          -keystore android/release.keystore \
+          -storepass "${{ secrets.KEYSTORE_PASS }}" \
+          -alias "${{ secrets.KEY_ALIAS }}"
+
     - name: Build APK release
       working-directory: android
+      env:
+        KSPASS: ${{ secrets.KEYSTORE_PASS }}
+        KALIAS: ${{ secrets.KEY_ALIAS }}
+        KPASS:  ${{ secrets.KEY_PASS }}
       run: |
         ./gradlew assembleRelease \
           -Pandroid.injected.signing.store.file="$(pwd)/release.keystore" \
-          -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASS }}" \
-          -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
-          -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASS }}"
+          -Pandroid.injected.signing.store.password="$KSPASS" \
+          -Pandroid.injected.signing.key.alias="$KALIAS" \
+          -Pandroid.injected.signing.key.password="$KPASS"
 
-    # ── Rinomina APK ──
-    - name: Rinomina APK
-      run: |
-        VERSION="${{ github.ref_name }}"
-        [[ "$VERSION" == "main" ]] && VERSION="dev"
-        cp android/app/build/outputs/apk/release/app-release.apk \
-           DXCluster-${VERSION}.apk
-
-    # ── Upload artefatto (sempre) ──
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: DXCluster-APK
-        path: DXCluster-*.apk
+        path: android/app/build/outputs/apk/release/app-release.apk
         retention-days: 30
 
-    # ── Release GitHub (solo su tag v*) ──
     - name: Crea Release GitHub
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
-        files: DXCluster-*.apk
+        files: android/app/build/outputs/apk/release/app-release.apk
         name: "DX Cluster ${{ github.ref_name }}"
         body: |
           ## DX Cluster · IW1FZR ${{ github.ref_name }}
-          Connessione TCP nativa ai cluster DX — filtri banda/modo — invio spot
-          
-          **Installazione:** scarica l'APK → abilita "Origini sconosciute" su Android → installa
+          Connessione TCP nativa ai cluster DX
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
