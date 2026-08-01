@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#0a0f0a" />
+  <title>DX Cluster · IW1FZR</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    :root {
+      --bg:      #0a0f0a;
+      --surf:    #111811;
+      --surf2:   #182018;
+      --border:  #2a3a2a;
+      --green:   #4ade80;
+      --green2:  #22c55e;
+      --amber:   #fbbf24;
+      --red:     #f87171;
+      --blue:    #60a5fa;
+      --cyan:    #22d3ee;
+      --purple:  #c084fc;
+      --text:    #d1fae5;
+      --muted:   #6b7280;
+      --font:    'Courier New', monospace;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    html,body { height:100%; background:var(--bg); overflow:hidden; font-family:var(--font); }
+    #app { display:flex; flex-direction:column; height:100%; height:100dvh; }
+
+    /* TOPBAR */
+    .topbar { background:var(--surf); border-bottom:1px solid var(--border); padding:10px 14px;
+      display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .topbar-l { display:flex; align-items:center; gap:9px; }
+    .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); transition:all .3s; flex-shrink:0; }
+    .dot.on  { background:var(--green);  box-shadow:0 0 7px var(--green); }
+    .dot.ing { background:var(--amber);  animation:pulse 1s infinite; }
+    .dot.err { background:var(--red); }
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .app-title  { color:var(--green); font-size:14px; font-weight:bold; letter-spacing:1.5px; }
+    .conn-label { color:var(--muted); font-size:10px; margin-top:1px; }
+    .badge { background:var(--surf2); border:1px solid var(--border); border-radius:12px;
+      padding:3px 9px; color:var(--green2); font-size:11px; }
+
+    /* TABS */
+    .tabs { display:flex; background:var(--surf); border-bottom:1px solid var(--border); flex-shrink:0; }
+    .tab  { flex:1; padding:8px 4px; text-align:center; font-size:10px; color:var(--muted);
+      cursor:pointer; border-bottom:2px solid transparent; font-family:var(--font);
+      letter-spacing:.5px; transition:color .15s,border-color .15s; user-select:none; }
+    .tab i { display:block; font-size:18px; margin-bottom:2px; }
+    .tab.active { color:var(--green); border-bottom-color:var(--green); }
+
+    /* PANELS */
+    .panel { display:none; flex-direction:column; flex:1; overflow:hidden; }
+    .panel.active { display:flex; }
+
+    /* FILTER BAR */
+    .fbar { background:var(--surf); border-bottom:1px solid var(--border);
+      padding:6px 10px; display:flex; gap:5px; align-items:center;
+      overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+    .fbar::-webkit-scrollbar{display:none}
+    .flbl { color:var(--muted); font-size:10px; white-space:nowrap; }
+    .chip { padding:3px 9px; border-radius:20px; font-size:10px; cursor:pointer;
+      border:1px solid var(--border); color:var(--muted); background:transparent;
+      font-family:var(--font); white-space:nowrap; transition:all .15s; user-select:none; }
+    .chip.active { border-color:var(--green); color:var(--green); background:rgba(74,222,128,.09); }
+    /* band colors */
+    .b160.active{--c:#c084fc} .b80.active{--c:#f87171} .b40.active{--c:#fb923c}
+    .b20.active{--c:#4ade80}  .b17.active{--c:#22d3ee} .b15.active{--c:#60a5fa}
+    .b10.active{--c:#fbbf24}  .b6.active{--c:#f472b6}
+    .chip[class*='b'].active{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent)}
+    .mCW.active  {border-color:var(--amber);color:var(--amber);background:rgba(251,191,36,.09)}
+    .mSSB.active {border-color:var(--blue);color:var(--blue);background:rgba(96,165,250,.09)}
+    .mFT8.active {border-color:var(--cyan);color:var(--cyan);background:rgba(34,211,238,.09)}
+    .mDIGI.active{border-color:var(--purple);color:var(--purple);background:rgba(192,132,252,.09)}
+
+    /* SEARCH */
+    .srow { display:flex; gap:6px; padding:6px 10px; background:var(--surf);
+      border-bottom:1px solid var(--border); flex-shrink:0; }
+    .sinput { flex:1; background:var(--surf2); border:1px solid var(--border); color:var(--text);
+      padding:6px 10px; border-radius:7px; font-family:var(--font); font-size:12px; outline:none; }
+    .sinput:focus{border-color:var(--green2)}
+    .sinput::placeholder{color:var(--muted)}
+    .ibtn { background:var(--surf2); border:1px solid var(--border); color:var(--text);
+      padding:6px 11px; border-radius:7px; cursor:pointer; font-size:15px; }
+
+    /* SPOT LIST */
+    #spot-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .sitem { border-bottom:1px solid var(--border); padding:8px 10px; cursor:pointer;
+      display:grid; grid-template-columns:56px 1fr auto; gap:4px; align-items:start; }
+    .sitem:active{background:var(--surf2)}
+    @keyframes fadein{from{background:rgba(74,222,128,.18)}to{background:transparent}}
+    .sitem.new{animation:fadein 1.5s ease}
+    .sfreq { font-size:12px; font-weight:bold; line-height:1.3; }
+    .bdot  { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:3px; vertical-align:middle; }
+    .sband { color:var(--muted); font-size:9px; }
+    .scall { color:var(--green); font-size:13px; font-weight:bold; }
+    .sde   { color:var(--muted); font-size:10px; }
+    .scomm { color:var(--text); font-size:10px; margin-top:1px; opacity:.75; }
+    .sright{ text-align:right; }
+    .smode { font-size:10px; border-radius:3px; padding:1px 5px; display:inline-block; margin-bottom:3px; }
+    .modeCW   {color:var(--amber);border:1px solid var(--amber)}
+    .modeSSB  {color:var(--blue);border:1px solid var(--blue)}
+    .modeFT8  {color:var(--cyan);border:1px solid var(--cyan)}
+    .modeDIGI {color:var(--purple);border:1px solid var(--purple)}
+    .modeAM   {color:var(--red);border:1px solid var(--red)}
+    .stime {color:var(--muted);font-size:10px}
+    .sdxcc {color:var(--amber);font-size:10px}
+    .nbadge{font-size:9px;color:var(--green);border:1px solid var(--green);border-radius:3px;padding:0 3px;margin-left:4px}
+    .empty {color:var(--muted);text-align:center;padding:40px 20px;font-size:12px;line-height:1.9}
+
+    /* SEND */
+    .sform{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+    .flabel{color:var(--muted);font-size:10px;letter-spacing:.5px;margin-bottom:4px}
+    .finput{width:100%;background:var(--surf2);border:1px solid var(--border);color:var(--text);
+      padding:9px 11px;border-radius:7px;font-family:var(--font);font-size:13px;outline:none}
+    .finput:focus{border-color:var(--green2)}
+    .frow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .mchips{display:flex;gap:6px;flex-wrap:wrap}
+    .mchip{padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;
+      border:1px solid var(--border);color:var(--muted);background:transparent;
+      font-family:var(--font);transition:all .15s;user-select:none}
+    .mchip.sel{border-color:var(--green);color:var(--green);background:rgba(74,222,128,.1)}
+    .prevbox{background:var(--surf2);border:1px solid var(--border);border-radius:7px;
+      padding:9px 11px;font-size:11px;color:var(--muted);line-height:1.6}
+    .prevbox span{color:var(--green)}
+    .sendbtn{background:rgba(74,222,128,.1);border:1px solid var(--green2);color:var(--green);
+      padding:13px;border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer;
+      letter-spacing:1px;font-weight:bold;width:100%}
+    .sendbtn:active{background:rgba(74,222,128,.22)}
+    .chint{color:var(--muted);font-size:10px;text-align:center}
+    .chint span{color:var(--green)}
+
+    /* CLUSTER */
+    .clist{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .ccard{background:var(--surf2);border:1px solid var(--border);border-radius:9px;
+      padding:11px 13px;cursor:pointer;display:flex;align-items:center;gap:10px}
+    .ccard:active{background:var(--surf)}
+    .ccard.connected{border-color:var(--green)}
+    .ccdot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all .3s}
+    .ccard.connected .ccdot{background:var(--green);box-shadow:0 0 5px var(--green)}
+    .ccname{color:var(--text);font-size:12px;font-weight:bold}
+    .cchost{color:var(--muted);font-size:10px;margin-top:2px}
+    .ccping{color:var(--green2);font-size:10px;margin-left:auto;white-space:nowrap}
+    .slbl{color:var(--muted);font-size:10px;letter-spacing:1px;padding:4px 2px 2px}
+    .custsrv{background:var(--surf2);border:1px solid var(--border);border-radius:9px;
+      padding:11px 13px;display:flex;flex-direction:column;gap:8px}
+    .addbtn{background:transparent;border:1px solid var(--green2);color:var(--green);
+      padding:8px;border-radius:7px;font-family:var(--font);font-size:11px;cursor:pointer}
+    .consolebox{background:var(--surf2);border:1px solid var(--border);border-radius:8px;
+      padding:8px 10px;height:120px;overflow-y:auto;font-size:10px}
+    .logline{margin-bottom:2px;line-height:1.5}
+    .lok {color:var(--green2)} .lerr{color:var(--red)} .linfo{color:var(--muted)} .lrx{color:var(--cyan)}
+
+    /* STATS */
+    .sbody{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .scard{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:11px}
+    .sval{color:var(--green);font-size:22px;font-weight:bold}
+    .slb{color:var(--muted);font-size:10px;margin-top:2px}
+    .brow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+    .blbl{font-size:10px;width:24px;text-align:right}
+    .btrack{flex:1;background:var(--surf2);border-radius:3px;height:14px;overflow:hidden}
+    .bfill{height:100%;border-radius:3px;opacity:.75;transition:width .4s}
+    .bcnt{color:var(--muted);font-size:10px;width:22px}
+    .trow{display:flex;align-items:center;gap:8px}
+    .trank{color:var(--amber);font-size:10px;width:14px}
+    .tcall{color:var(--green);font-size:12px;flex:1}
+    .tcnt{color:var(--muted);font-size:10px}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+      background:rgba(10,15,10,.95);border:1px solid var(--green);color:var(--green);
+      padding:9px 18px;border-radius:9px;font-size:12px;opacity:0;
+      transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:100}
+    #toast.show{opacity:1}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-l">
+      <div class="dot" id="cdot"></div>
+      <div>
+        <div class="app-title">DX CLUSTER</div>
+        <div class="conn-label" id="clabel">Non connesso</div>
+      </div>
+    </div>
+    <div class="badge" id="badge">0 spot</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-spots"   onclick="showTab('spots')"><i class="ti ti-radio"></i>SPOT</div>
+    <div class="tab"        id="tab-send"    onclick="showTab('send')"><i class="ti ti-send"></i>INVIA</div>
+    <div class="tab"        id="tab-cluster" onclick="showTab('cluster')"><i class="ti ti-server"></i>SERVER</div>
+    <div class="tab"        id="tab-stats"   onclick="showTab('stats')"><i class="ti ti-chart-bar"></i>STATS</div>
+  </div>
+
+  <!-- SPOTS -->
+  <div class="panel active" id="panel-spots">
+    <div class="fbar">
+      <span class="flbl">BANDA</span>
+      <div class="chip active" id="fb-ALL" onclick="fBand('ALL')">TUTTE</div>
+      <div class="chip b160"   id="fb-160" onclick="fBand('160')">160m</div>
+      <div class="chip b80"    id="fb-80"  onclick="fBand('80')">80m</div>
+      <div class="chip b40"    id="fb-40"  onclick="fBand('40')">40m</div>
+      <div class="chip b20"    id="fb-20"  onclick="fBand('20')">20m</div>
+      <div class="chip b17"    id="fb-17"  onclick="fBand('17')">17m</div>
+      <div class="chip b15"    id="fb-15"  onclick="fBand('15')">15m</div>
+      <div class="chip b10"    id="fb-10"  onclick="fBand('10')">10m</div>
+      <div class="chip b6"     id="fb-6"   onclick="fBand('6')">6m</div>
+    </div>
+    <div class="fbar">
+      <span class="flbl">MODO</span>
+      <div class="chip active" id="fm-ALL"  onclick="fMode('ALL')">TUTTI</div>
+      <div class="chip mCW"    id="fm-CW"   onclick="fMode('CW')">CW</div>
+      <div class="chip mSSB"   id="fm-SSB"  onclick="fMode('SSB')">SSB</div>
+      <div class="chip mFT8"   id="fm-FT8"  onclick="fMode('FT8')">FT8</div>
+      <div class="chip mDIGI"  id="fm-DIGI" onclick="fMode('DIGI')">DIGI</div>
+    </div>
+    <div class="srow">
+      <input class="sinput" id="search" placeholder="Cerca callsign, DXCC, commento…" oninput="renderSpots()" />
+      <button class="ibtn" onclick="renderSpots()"><i class="ti ti-refresh"></i></button>
+    </div>
+    <div id="spot-list"></div>
+  </div>
+
+  <!-- SEND -->
+  <div class="panel" id="panel-send">
+    <div class="sform">
+      <div>
+        <div class="flabel">STAZIONE DX</div>
+        <input class="finput" id="s-call" placeholder="ES. JA1NUT" style="text-transform:uppercase"
+               oninput="this.value=this.value.toUpperCase();updPrev()" />
+      </div>
+      <div class="frow2">
+        <div>
+          <div class="flabel">FREQUENZA (kHz)</div>
+          <input class="finput" id="s-freq" placeholder="14025.0" type="number" step="0.1" oninput="updPrev()" />
+        </div>
+        <div>
+          <div class="flabel">MODO</div>
+          <div class="mchips">
+            <div class="mchip sel" onclick="selM(this,'CW')">CW</div>
+            <div class="mchip"     onclick="selM(this,'SSB')">SSB</div>
+            <div class="mchip"     onclick="selM(this,'FT8')">FT8</div>
+            <div class="mchip"     onclick="selM(this,'DIGI')">DIGI</div>
+            <div class="mchip"     onclick="selM(this,'AM')">AM</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="flabel">COMMENTO</div>
+        <input class="finput" id="s-comment" placeholder="ES. 599 UP2" oninput="updPrev()" />
+      </div>
+      <div>
+        <div class="flabel">ANTEPRIMA</div>
+        <div class="prevbox" id="s-prev"><span>DX de IW1FZR:</span> — — —</div>
+      </div>
+      <button class="sendbtn" onclick="doSend()">
+        <i class="ti ti-send" style="font-size:14px;vertical-align:-2px"></i>&nbsp; INVIA SPOT
+      </button>
+      <div class="chint">DE: <span id="mycall-lbl">IW1FZR</span></div>
+    </div>
+  </div>
+
+  <!-- CLUSTER -->
+  <div class="panel" id="panel-cluster">
+    <div class="clist">
+      <div class="slbl">SERVER</div>
+      <div id="server-list"></div>
+      <div class="slbl" style="margin-top:4px">AGGIUNGI SERVER</div>
+      <div class="custsrv">
+        <div class="frow2" style="grid-template-columns:1fr 80px">
+          <div><div class="flabel">HOST</div><input class="finput" id="c-host" placeholder="cluster.esempio.it" style="font-size:11px"/></div>
+          <div><div class="flabel">PORTA</div><input class="finput" id="c-port" placeholder="7300" type="number" style="font-size:11px"/></div>
+        </div>
+        <div><div class="flabel">NOME</div><input class="finput" id="c-name" placeholder="Nome cluster" style="font-size:11px"/></div>
+        <button class="addbtn" onclick="addServer()"><i class="ti ti-plus" style="font-size:13px;vertical-align:-2px"></i> Aggiungi</button>
+      </div>
+      <div class="slbl" style="margin-top:4px">CONSOLE</div>
+      <div class="consolebox" id="consolebox"></div>
+      <div style="margin-top:4px">
+        <div class="flabel">MIO CALLSIGN</div>
+        <input class="finput" id="my-call" value="IW1FZR" style="text-transform:uppercase"
+               oninput="this.value=this.value.toUpperCase();document.getElementById('mycall-lbl').textContent=this.value||'IW1FZR';updPrev()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="panel" id="panel-stats">
+    <div class="sbody">
+      <div class="sgrid">
+        <div class="scard"><div class="sval" id="st-tot">0</div><div class="slb">SPOT TOTALI</div></div>
+        <div class="scard"><div class="sval" id="st-dxcc">0</div><div class="slb">DXCC UNICI</div></div>
+        <div class="scard"><div class="sval" id="st-ft8">0</div><div class="slb">SPOT FT8</div></div>
+        <div class="scard"><div class="sval" id="st-cw">0</div><div class="slb">SPOT CW</div></div>
+      </div>
+      <div><div class="slbl" style="margin-bottom:8px">BANDE</div><div id="band-bars"></div></div>
+      <div><div class="slbl" style="margin-bottom:8px">TOP DX</div><div id="top-dx" style="display:flex;flex-direction:column;gap:5px"></div></div>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

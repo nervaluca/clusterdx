@@ -1,0 +1,110 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install dipendenze npm
+      run: npm ci
+
+    - name: Capacitor add android
+      run: npx cap add android
+
+    - name: Capacitor sync
+      run: npx cap sync android
+
+    # ── Copia plugin TCP nativo ──
+    - name: Copia TelnetClusterPlugin
+      run: |
+        DEST="android/app/src/main/java/it/iw1fzr/dxcluster/plugins"
+        mkdir -p "$DEST"
+        cp android-plugin/TelnetClusterPlugin.java "$DEST/"
+
+    # ── Patch MainActivity: registra plugin ──
+    - name: Patch MainActivity
+      run: |
+        MAIN="android/app/src/main/java/it/iw1fzr/dxcluster/MainActivity.java"
+        # Aggiunge import
+        sed -i 's/import com\.getcapacitor\.BridgeActivity;/import com.getcapacitor.BridgeActivity;\nimport it.iw1fzr.dxcluster.plugins.TelnetClusterPlugin;/' "$MAIN"
+        # Registra plugin prima di super.onCreate
+        sed -i 's/super\.onCreate(savedInstanceState);/registerPlugin(TelnetClusterPlugin.class);\n        super.onCreate(savedInstanceState);/' "$MAIN"
+        echo "=== MainActivity.java ==="
+        cat "$MAIN"
+
+    # ── Patch AndroidManifest: permesso INTERNET ──
+    - name: Patch AndroidManifest
+      run: |
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application/' "$MANIFEST"
+        echo "=== AndroidManifest.xml ==="
+        cat "$MANIFEST"
+
+    # ── Decodifica keystore ──
+    - name: Decodifica keystore
+      run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+
+    # ── Build APK release ──
+    - name: Build APK release
+      working-directory: android
+      run: |
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file="$(pwd)/release.keystore" \
+          -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASS }}" \
+          -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+          -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASS }}"
+
+    # ── Rinomina APK ──
+    - name: Rinomina APK
+      run: |
+        VERSION="${{ github.ref_name }}"
+        [[ "$VERSION" == "main" ]] && VERSION="dev"
+        cp android/app/build/outputs/apk/release/app-release.apk \
+           DXCluster-${VERSION}.apk
+
+    # ── Upload artefatto (sempre) ──
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DXCluster-APK
+        path: DXCluster-*.apk
+        retention-days: 30
+
+    # ── Release GitHub (solo su tag v*) ──
+    - name: Crea Release GitHub
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: DXCluster-*.apk
+        name: "DX Cluster ${{ github.ref_name }}"
+        body: |
+          ## DX Cluster · IW1FZR ${{ github.ref_name }}
+          Connessione TCP nativa ai cluster DX — filtri banda/modo — invio spot
+          
+          **Installazione:** scarica l'APK → abilita "Origini sconosciute" su Android → installa
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

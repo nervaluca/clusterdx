@@ -1,0 +1,10 @@
+{
+  "appId": "it.iw1fzr.dxcluster",
+  "appName": "DX Cluster",
+  "webDir": "src",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
