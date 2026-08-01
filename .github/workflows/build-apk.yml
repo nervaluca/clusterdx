@@ -54,44 +54,13 @@ jobs:
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" \/>\n    <application/' "$MANIFEST"
 
-    - name: Decodifica keystore
-      run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
-
-    - name: Verifica keystore
-      run: |
-        keytool -list \
-          -keystore android/release.keystore \
-          -storepass "${{ secrets.KEYSTORE_PASS }}" \
-          -alias "${{ secrets.KEY_ALIAS }}"
-
-    - name: Build APK release
+    - name: Build APK debug
       working-directory: android
-      env:
-        KSPASS: ${{ secrets.KEYSTORE_PASS }}
-        KALIAS: ${{ secrets.KEY_ALIAS }}
-        KPASS:  ${{ secrets.KEY_PASS }}
-      run: |
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file="$(pwd)/release.keystore" \
-          -Pandroid.injected.signing.store.password="$KSPASS" \
-          -Pandroid.injected.signing.key.alias="$KALIAS" \
-          -Pandroid.injected.signing.key.password="$KPASS"
+      run: ./gradlew assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: DXCluster-APK
-        path: android/app/build/outputs/apk/release/app-release.apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
-
-    - name: Crea Release GitHub
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: android/app/build/outputs/apk/release/app-release.apk
-        name: "DX Cluster ${{ github.ref_name }}"
-        body: |
-          ## DX Cluster · IW1FZR ${{ github.ref_name }}
-          Connessione TCP nativa ai cluster DX
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
