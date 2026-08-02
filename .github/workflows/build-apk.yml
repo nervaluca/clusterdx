@@ -65,4 +65,9 @@ jobs:
     - name: Trova APK
       run: find android/app/build/outputs -name "*.apk"
 
-    - name: Uploa
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DXCluster-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
