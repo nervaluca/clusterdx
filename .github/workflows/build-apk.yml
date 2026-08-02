@@ -46,10 +46,19 @@ jobs:
     - name: Patch MainActivity
       run: |
         MAIN="android/app/src/main/java/it/iw1fzr/dxcluster/MainActivity.java"
-        echo "=== PRIMA ==="
-        cat "$MAIN"
-        sed -i 's/import com\.getcapacitor\.BridgeActivity;/import com.getcapacitor.BridgeActivity;\nimport it.iw1fzr.dxcluster.plugins.TelnetClusterPlugin;/' "$MAIN"
-        sed -i 's/super\.onCreate(savedInstanceState);/registerPlugin(TelnetClusterPlugin.class);\n        super.onCreate(savedInstanceState);/' "$MAIN"
+        cat > "$MAIN" << 'JAVAEOF'
+        package it.iw1fzr.dxcluster;
+        import android.os.Bundle;
+        import com.getcapacitor.BridgeActivity;
+        import it.iw1fzr.dxcluster.plugins.TelnetClusterPlugin;
+        public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+                registerPlugin(TelnetClusterPlugin.class);
+                super.onCreate(savedInstanceState);
+            }
+        }
+        JAVAEOF
         echo "=== DOPO ==="
         cat "$MAIN"
 
